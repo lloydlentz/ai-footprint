@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoFootprint | Interactive Environmental Footprint & AI Impact Visualizer</title>
+  <meta name="description" content="Calculate your personal environmental footprint with US metrics and explore the hidden carbon and water impact of AI usage. Compare your usage with average benchmarks.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Ambient background shapes -->
+  <div class="ambient-glow bg-glow-1" aria-hidden="true"></div>
+  <div class="ambient-glow bg-glow-2" aria-hidden="true"></div>
+  
+  <div class="app-container">
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="logo-icon">🌱</span>
+        <div class="logo-text">
+          <h1>EcoFootprint</h1>
+          <p>Personal Carbon &amp; AI Impact Calculator</p>
+        </div>
+      </div>
+      <button id="theme-toggle" class="theme-btn" aria-label="Toggle light/dark mode" title="Toggle theme">
+        <span class="icon-light">☀️</span>
+        <span class="icon-dark">🌙</span>
+      </button>
+    </header>
+
+    <main class="calculator-grid">
+      <!-- INPUT PANEL -->
+      <section class="panel input-panel" aria-labelledby="inputs-heading">
+        <h2 id="inputs-heading" class="sr-only">Calculator Inputs</h2>
+        
+        <!-- Category: Living -->
+        <div class="card input-card" id="card-living">
+          <div class="card-header">
+            <span class="card-icon">🏠</span>
+            <h3>Living &amp; Energy</h3>
+          </div>
+          <div class="card-body">
+            <div class="input-group">
+              <label class="group-label">Living Situation</label>
+              <div class="segmented-control">
+                <input type="radio" id="live-house" name="living-situation" value="house" checked>
+                <label for="live-house">Single House</label>
+                <input type="radio" id="live-apartment" name="living-situation" value="apartment">
+                <label for="live-apartment">Dorm / Apartment</label>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label for="heating-fuel" class="group-label">Primary Heating Source</label>
+              <select id="heating-fuel" class="custom-select">
+                <option value="natural-gas">Natural Gas</option>
+                <option value="electricity">Electric Heating / Heat Pump</option>
+                <option value="fuel-oil">Heating Fuel Oil</option>
+                <option value="propane">Propane Gas</option>
+                <option value="none">None / Solar Heating</option>
+              </select>
+            </div>
+
+            <div class="input-group">
+              <div class="slider-header">
+                <label for="electric-bill" class="group-label">Monthly Electricity Bill</label>
+                <span class="slider-badge" id="electric-bill-val">$120</span>
+              </div>
+              <input type="range" id="electric-bill" min="0" max="400" step="5" value="120" class="custom-slider">
+              <span class="slider-help">Estimates kWh carbon footprint based on U.S. national grid average ($0.16/kWh).</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category: Travel & Transportation -->
+        <div class="card input-card" id="card-transport">
+          <div class="card-header">
+            <span class="card-icon">🚗</span>
+            <h3>Travel &amp; Transportation</h3>
+          </div>
+          <div class="card-body">
+            <div class="input-group">
+              <div class="checkbox-wrapper">
+                <input type="checkbox" id="is-ev" class="custom-checkbox">
+                <label for="is-ev" class="checkbox-label font-medium">I drive an Electric Vehicle (EV)</label>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <div class="slider-header">
+                <label for="car-miles" class="group-label">Annual Car Travel</label>
+                <span class="slider-badge" id="car-miles-val">12,000 miles</span>
+              </div>
+              <input type="range" id="car-miles" min="0" max="30000" step="500" value="12000" class="custom-slider">
+            </div>
+
+            <div class="input-group" id="mpg-group">
+              <div class="slider-header">
+                <label for="car-mpg" class="group-label">Car Fuel Economy</label>
+                <span class="slider-badge" id="car-mpg-val">25 MPG</span>
+              </div>
+              <input type="range" id="car-mpg" min="10" max="60" step="1" value="25" class="custom-slider">
+            </div>
+
+            <div class="input-group">
+              <div class="slider-header">
+                <label for="flight-miles" class="group-label">Annual Air Travel</label>
+                <span class="slider-badge" id="flight-miles-val">5,000 miles</span>
+              </div>
+              <input type="range" id="flight-miles" min="0" max="50000" step="500" value="5000" class="custom-slider">
+              
+              <div class="preset-group">
+                <span class="preset-label">Add Trip Presets:</span>
+                <button type="button" class="preset-btn" data-miles="1500">Short flight (e.g. Chicago to Boston RT)</button>
+                <button type="button" class="preset-btn" data-miles="5000">Coast-to-Coast RT (e.g. NY to LA RT)</button>
+                <button type="button" class="preset-btn" data-miles="7000">Transatlantic RT (e.g. NY to London RT)</button>
+                <button type="button" id="clear-flights" class="preset-btn btn-danger">Reset Flights</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category: AI Usage -->
+        <div class="card input-card highlight-border" id="card-ai">
+          <div class="card-badge">HIGHLIGHT</div>
+          <div class="card-header">
+            <span class="card-icon">🤖</span>
+            <h3>Digital &amp; AI Usage</h3>
+          </div>
+          <div class="card-body">
+            <p class="section-intro">AI models require intensive compute resources and high-performance server cooling. Estimate your daily digital usage here.</p>
+            
+            <div class="input-group">
+              <div class="slider-header">
+                <label for="ai-prompts" class="group-label">AI Text Queries <span class="subtext">(ChatGPT, Gemini, search bots)</span></label>
+                <span class="slider-badge" id="ai-prompts-val">15 / day</span>
+              </div>
+              <input type="range" id="ai-prompts" min="0" max="200" step="5" value="15" class="custom-slider">
+            </div>
+
+            <div class="input-group">
+              <div class="slider-header">
+                <label for="ai-images" class="group-label">AI Image Generations <span class="subtext">(DALL-E, Midjourney, etc.)</span></label>
+                <span class="slider-badge" id="ai-images-val">2 / day</span>
+              </div>
+              <input type="range" id="ai-images" min="0" max="50" step="1" value="2" class="custom-slider">
+            </div>
+          </div>
+        </div>
+
+        <!-- Category: Diet & Mitigation Actions -->
+        <div class="card input-card" id="card-lifestyle">
+          <div class="card-header">
+            <span class="card-icon">🥗</span>
+            <h3>Diet &amp; Ecological Habits</h3>
+          </div>
+          <div class="card-body">
+            <div class="input-group">
+              <label for="diet-type" class="group-label">Primary Diet Profile</label>
+              <select id="diet-type" class="custom-select">
+                <option value="meat-heavy">Meat-Heavy (Frequent beef/pork)</option>
+                <option value="average" selected>Average / Balanced Diet</option>
+                <option value="vegetarian">Vegetarian (No meat, does dairy)</option>
+                <option value="vegan">Vegan (Entirely plant-based)</option>
+              </select>
+            </div>
+
+            <div class="input-group">
+              <label class="group-label mb-2 block">Footprint Reduction Checkboxes</label>
+              <div class="checkbox-grid">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="mit-recycle" class="custom-checkbox" checked>
+                  <label for="mit-recycle" class="checkbox-label">I recycle paper, plastic, glass, &amp; metals</label>
+                </div>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="mit-compost" class="custom-checkbox">
+                  <label for="mit-compost" class="checkbox-label">I compost organic and food waste</label>
+                </div>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="mit-energy" class="custom-checkbox" checked>
+                  <label for="mit-energy" class="checkbox-label">I use LED bulbs &amp; energy-efficient appliances</label>
+                </div>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="mit-dry" class="custom-checkbox">
+                  <label for="mit-dry" class="checkbox-label">I line-dry laundry instead of running a dryer</label>
+                </div>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="mit-temp" class="custom-checkbox">
+                  <label for="mit-temp" class="checkbox-label">I adjust thermostat 2°F (cooler in winter / warmer in summer)</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESULTS PANEL -->
+      <section class="panel results-panel" aria-labelledby="results-heading">
+        <h2 id="results-heading" class="sr-only">Carbon Footprint Results</h2>
+        
+        <div class="sticky-results">
+          <!-- Dial Meter Card -->
+          <div class="card result-card main-result-card">
+            <div class="gauge-container">
+              <svg viewBox="0 0 200 120" class="dial-svg">
+                <!-- Gauge Gradients -->
+                <defs>
+                  <linearGradient id="dial-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="var(--color-success)" />
+                    <stop offset="50%" stop-color="var(--color-warning)" />
+                    <stop offset="100%" stop-color="var(--color-danger)" />
+                  </linearGradient>
+                  <!-- Soft Glow Filter -->
+                  <filter id="glow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="var(--color-success)" flood-opacity="0.3"/>
+                  </filter>
+                </defs>
+                
+                <!-- Dial Track -->
+                <path class="dial-track" d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke="var(--bg-track)" stroke-width="12" stroke-linecap="round" />
+                
+                <!-- Dynamic Dial Fill -->
+                <path id="dial-active-fill" class="dial-fill" d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke="url(#dial-grad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3" />
+                
+                <!-- Guidelines / Tick Markers -->
+                <line x1="20" y1="105" x2="28" y2="105" stroke="var(--text-muted)" stroke-width="1.5" />
+                <line x1="180" y1="105" x2="172" y2="105" stroke="var(--text-muted)" stroke-width="1.5" />
+                <!-- 35k Average Tick (approx 84 degrees rotated from start, or at coordinate (100, 25)) -->
+                <line x1="100" y1="25" x2="100" y2="33" stroke="var(--text-primary)" stroke-width="2" />
+                
+                <!-- Pointer Needle -->
+                <g id="dial-needle-group" class="needle-group">
+                  <line x1="100" y1="105" x2="100" y2="38" stroke="var(--text-primary)" stroke-width="3" stroke-linecap="round" />
+                  <circle cx="100" cy="105" r="7" fill="var(--text-primary)" />
+                  <circle cx="100" cy="105" r="3" fill="var(--bg-card)" />
+                </g>
+              </svg>
+
+              <!-- Dynamic Readout underneath SVG -->
+              <div class="readout-text">
+                <span class="readout-value" id="footprint-total">0</span>
+                <span class="readout-unit">pounds CO₂e / year</span>
+              </div>
+            </div>
+
+            <!-- Comparisons & Indicators -->
+            <div class="benchmarks-container">
+              <div class="benchmark-item">
+                <span class="benchmark-label">Sustainable Goal</span>
+                <span class="benchmark-value val-green">10,000 lbs</span>
+              </div>
+              <div class="benchmark-item marker-average">
+                <span class="benchmark-label">US National Average</span>
+                <span class="benchmark-value val-orange">35,000 lbs</span>
+              </div>
+              <div class="benchmark-item">
+                <span class="benchmark-label">Global Average</span>
+                <span class="benchmark-value val-blue">11,000 lbs</span>
+              </div>
+            </div>
+
+            <!-- Interactive Comparison Sentence -->
+            <div class="comparison-banner" id="comparison-verdict">
+              Calculating footprint...
+            </div>
+          </div>
+
+          <!-- Category Breakdown Card -->
+          <div class="card result-card">
+            <h3>Carbon Footprint Breakdown</h3>
+            <div class="chart-container">
+              <div class="bar-chart" role="img" aria-label="Horizontal bar chart representing carbon emissions breakdown by category.">
+                <!-- Housing Row -->
+                <div class="chart-row">
+                  <div class="row-label">
+                    <span>🏠 Housing &amp; Utilities</span>
+                    <span class="row-value-text" id="breakdown-housing-val">0 lbs</span>
+                  </div>
+                  <div class="bar-track">
+                    <div class="bar-fill fill-housing" id="breakdown-housing-bar" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <!-- Driving Row -->
+                <div class="chart-row">
+                  <div class="row-label">
+                    <span>🚗 Driving &amp; Vehicles</span>
+                    <span class="row-value-text" id="breakdown-driving-val">0 lbs</span>
+                  </div>
+                  <div class="bar-track">
+                    <div class="bar-fill fill-driving" id="breakdown-driving-bar" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <!-- Flying Row -->
+                <div class="chart-row">
+                  <div class="row-label">
+                    <span>✈️ Air Travel</span>
+                    <span class="row-value-text" id="breakdown-flying-val">0 lbs</span>
+                  </div>
+                  <div class="bar-track">
+                    <div class="bar-fill fill-flying" id="breakdown-flying-bar" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <!-- Food & Waste Row -->
+                <div class="chart-row">
+                  <div class="row-label">
+                    <span>🥗 Food &amp; Waste</span>
+                    <span class="row-value-text" id="breakdown-lifestyle-val">0 lbs</span>
+                  </div>
+                  <div class="bar-track">
+                    <div class="bar-fill fill-lifestyle" id="breakdown-lifestyle-bar" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <!-- AI Usage Row -->
+                <div class="chart-row">
+                  <div class="row-label">
+                    <span>🤖 AI &amp; Digital Usage</span>
+                    <span class="row-value-text" id="breakdown-ai-val">0 lbs</span>
+                  </div>
+                  <div class="bar-track">
+                    <div class="bar-fill fill-ai" id="breakdown-ai-bar" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Accessible Table Fallback for Screen Readers -->
+              <table class="sr-only">
+                <caption>Carbon footprint breakdown table</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Category</th>
+                    <th scope="col">Emissions (lbs CO₂e/year)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Housing &amp; Utilities</td>
+                    <td id="table-housing-val">0</td>
+                  </tr>
+                  <tr>
+                    <td>Driving &amp; Vehicles</td>
+                    <td id="table-driving-val">0</td>
+                  </tr>
+                  <tr>
+                    <td>Air Travel</td>
+                    <td id="table-flying-val">0</td>
+                  </tr>
+                  <tr>
+                    <td>Food &amp; Waste</td>
+                    <td id="table-lifestyle-val">0</td>
+                  </tr>
+                  <tr>
+                    <td>AI &amp; Digital Usage</td>
+                    <td id="table-ai-val">0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Highlight: AI Environmental Impact Spotlight -->
+          <div class="card result-card spotlight-card" id="ai-spotlight">
+            <div class="spotlight-header">
+              <span class="spotlight-badge">AI DEEP DIVE</span>
+              <h3>Hidden AI Environmental Footprint</h3>
+            </div>
+            
+            <p class="spotlight-desc">Computing neural networks requires energy-intensive data centers that draw massive electricity grids and consume millions of gallons of water for server evaporative cooling.</p>
+            
+            <div class="spotlight-metrics-grid">
+              <div class="spotlight-metric">
+                <span class="metric-icon">⚡</span>
+                <div class="metric-data">
+                  <span class="metric-val" id="ai-kwh-val">0</span>
+                  <span class="metric-unit">kWh Electricity / yr</span>
+                </div>
+              </div>
+              <div class="spotlight-metric">
+                <span class="metric-icon">💧</span>
+                <div class="metric-data">
+                  <span class="metric-val" id="ai-water-val">0</span>
+                  <span class="metric-unit">Gallons Water / yr</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Equivalence details carousel/panels -->
+            <div class="equivalence-box">
+              <p class="equivalence-title">🔋 Your AI usage footprint equates to:</p>
+              <ul class="equivalence-list">
+                <li>📱 Charging <strong id="eq-phones">0</strong> smartphones from empty to full.</li>
+                <li>💡 Powering a 10W LED bulb for <strong id="eq-bulbs">0</strong> hours.</li>
+                <li>🚗 Driving <strong id="eq-car-miles">0</strong> miles in a standard gasoline car.</li>
+                <li>🥤 Consuming <strong id="eq-water-glasses">0</strong> full 8oz glasses of drinking water.</li>
+              </ul>
+              <div class="ai-warning-box" id="ai-scale-warning">
+                <span class="warning-icon">💡</span>
+                <span class="warning-text">Did you know? An AI text query uses about 10x more energy than a traditional Google search (3 Wh vs 0.3 Wh)!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-content">
+        <p><strong>EcoFootprint</strong> is an educational visualization tool. U.S. units are utilized (miles, gallons, pounds). Calculations are based on peer-reviewed academic studies and government databases.</p>
+        <div class="source-links">
+          <h4>Data Sources &amp; References:</h4>
+          <ul>
+            <li><a href="https://www.epa.gov/ghgemissions/household-carbon-footprint-calculator" target="_blank" rel="noopener noreferrer">EPA Household Carbon Footprint Calculator</a></li>
+            <li><a href="https://www.epa.gov/egrid" target="_blank" rel="noopener noreferrer">EPA eGRID Emissions Rates Database</a></li>
+            <li><a href="https://arxiv.org/abs/2311.16989" target="_blank" rel="noopener noreferrer">"Making AI Less 'Thirsty'" – Water Footprint of AI (UC Riverside / shaoleiren.com)</a></li>
+            <li><a href="https://www.cell.com/joule/abstract/S2542-4351(23)00365-X" target="_blank" rel="noopener noreferrer">De Vries (2023) - The Growing Energy Footprint of Artificial Intelligence</a></li>
+            <li><a href="https://www.nature.com/articles/s41558-020-0880-y" target="_blank" rel="noopener noreferrer">Carbon emissions of different food diets (Nature Climate Change)</a></li>
+          </ul>
+        </div>
+        <p class="copyright">&copy; 2026 EcoFootprint. Built with modern web accessibility guidelines.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
