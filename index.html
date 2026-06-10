@@ -192,7 +192,9 @@
           <option value="3000">Heating oil / propane</option>
           <option value="500">Mild climate / minimal heating</option>
         </select>
-        <div class="mini">Dorm &amp; apartment values assume shared walls and smaller space, per person.</div>
+        <label class="lbl">People sharing your home</label>
+        <input type="range" id="hhSize" min="1" max="6" step="1" value="2">
+        <div class="mini">Divides home energy costs between <span id="hhVal">2 housemates</span>. Dorm &amp; apartment values also scale down for shared walls.</div>
       </div>
 
       <div class="ctl">
@@ -215,8 +217,21 @@
       </div>
 
       <div class="ctl">
+        <div class="ctl-head"><span class="dot" style="background:#f59e0b"></span>
+          <span class="ctl-title">Shopping &amp; goods</span></div>
+        <label class="lbl">Your typical consumption level</label>
+        <select id="goodsLevel">
+          <option value="320">Minimal — mostly secondhand, rarely buy new</option>
+          <option value="900" selected>Average consumer</option>
+          <option value="1590">Active shopper — regular clothing &amp; electronics</option>
+          <option value="2270">Heavy consumer — frequent new purchases</option>
+        </select>
+        <div class="mini">Clothing, electronics, furniture, and other goods — typically 10–15% of a US personal footprint.</div>
+      </div>
+
+      <div class="ctl">
         <div class="ctl-head"><span class="dot" style="background:var(--ai)"></span>
-          <span class="ctl-title">AI usage</span><span class="ctl-val" id="aiVal">30 / day</span></div>
+          <span class="ctl-title">AI &amp; digital usage</span><span class="ctl-val" id="aiVal">30 / day</span></div>
         <label class="lbl">AI chat prompts per day</label>
         <input type="range" id="aiPrompts" min="0" max="300" step="5" value="30">
         <label class="lbl">Typical prompt type</label>
@@ -226,6 +241,11 @@
           <button data-wh="12">Image / heavy</button>
         </div>
         <div class="mini">Energy per prompt: <span id="whLabel">0.3</span> Wh.</div>
+        <label class="lbl">Video streaming / day <span style="color:#aaa">(Netflix, YouTube, Disney+, etc.)</span></label>
+        <input type="range" id="streamHrs" min="0" max="10" step="0.5" value="2">
+        <label class="lbl">Social media / day <span style="color:#aaa">(TikTok, Instagram, Facebook, etc.)</span></label>
+        <input type="range" id="socialHrs" min="0" max="10" step="0.5" value="1.5">
+        <div class="mini">Streaming: <span id="streamVal">2</span> h/day · Social: <span id="socialVal">1.5</span> h/day</div>
       </div>
 
       <div class="ctl">
@@ -299,7 +319,7 @@
         <li><a href="https://co2.myclimate.org/en/flight_calculators/new" target="_blank" rel="noopener">myclimate — Flight emissions calculator</a> · <a href="https://theicct.org/" target="_blank" rel="noopener">ICCT aviation research</a></li>
         <li>Diet figures based on commonly cited life-cycle studies (meat-heavy ≈ 3.3 t, average ≈ 2.6 t, vegetarian ≈ 1.9 t, vegan ≈ 1.5 t CO₂e/yr).</li>
       </ul>
-      Categories cover transport, home energy, food, waste and AI. US average (~17.6 short tons) and world average (~5.2 short tons) shown for context.
+      Categories cover transport, home energy, food, consumed goods, waste, and AI &amp; digital media. US average (~17.6 short tons) and world average (~5.2 short tons) shown for context.
     </div>
   </footer>
 </div>
@@ -316,6 +336,8 @@
   var WASTE_MAX    = 600;      // kg/yr recycle nothing
   var WASTE_MIN    = 200;      // kg/yr recycle everything
   var ELEC_BASE    = 1500;     // kg/yr home electricity at mult=1
+  var STREAM_KG_HR = 0.045;    // kg CO2e per hour of HD video streaming (device + network + datacenter)
+  var SOCIAL_KG_HR = 0.007;    // kg CO2e per hour of social media browsing
 
   var US_AVG_T = 17.6;         // US per-capita, short tons (all activities)
   var WORLD_AVG_T = 5.2;       // world per-capita, short tons
@@ -328,10 +350,11 @@
   var state = {
     carMiles:11500, carFactor:0.40,
     flyShort:1, flyLong:0,
-    heat:1800, homeMult:0.60,
+    heat:1800, homeMult:0.60, hhSize:2,
     diet:2600,
+    goods:900,
     recycle:60,
-    aiPrompts:30, aiWh:0.3,
+    aiPrompts:30, aiWh:0.3, streaming:2, social:1.5,
     compost:false, renew:false, bike:false, cold:false
   };
 
@@ -346,20 +369,22 @@
     var airMiles = state.flyShort*SHORT_MILES + state.flyLong*LONG_MILES;
     var elec = ELEC_BASE * state.homeMult * (state.renew?0:1) * (state.cold?0.92:1);
     var heat = state.heat * state.homeMult * (state.cold?0.97:1);
-    var home = heat + elec;
+    var home = (heat + elec) / state.hhSize;
     var food = state.diet;
+    var goods = state.goods;
     var waste = WASTE_MAX - (state.recycle/100)*(WASTE_MAX-WASTE_MIN);
     if(state.compost) waste *= 0.65;
     var qPerYr = state.aiPrompts*365;
-    var ai = qPerYr * (state.aiWh/1000) * GRID;
+    var aiOnly = qPerYr * (state.aiWh/1000) * GRID;
+    var ai = aiOnly + state.streaming*365*STREAM_KG_HR + state.social*365*SOCIAL_KG_HR;
     var aiWaterL = qPerYr * WATER_PER_Q / 1000;
-    return {car:car, fly:fly, home:home, food:food, waste:waste, ai:ai,
+    return {car:car, fly:fly, home:home, food:food, goods:goods, waste:waste, ai:ai, aiOnly:aiOnly,
             airMiles:airMiles, aiQ:qPerYr, aiWaterL:aiWaterL,
-            total:car+fly+home+food+waste+ai};
+            total:car+fly+home+food+goods+waste+ai};
   }
 
-  var COLORS = {car:'#e8703a', fly:'#c2255c', home:'#f0a000', food:'#8d6e63', waste:'#7048e8', ai:'#1098ad'};
-  var NAMES  = {car:'Car travel', fly:'Air travel', home:'Home energy', food:'Diet', waste:'Waste & recycling', ai:'AI usage'};
+  var COLORS = {car:'#e8703a', fly:'#c2255c', home:'#f0a000', food:'#8d6e63', goods:'#f59e0b', waste:'#7048e8', ai:'#1098ad'};
+  var NAMES  = {car:'Car travel', fly:'Air travel', home:'Home energy', food:'Diet', goods:'Shopping & goods', waste:'Waste & recycling', ai:'AI & digital'};
 
   // ---- gauge ----
   function polar(cx,cy,r,deg){var a=(deg)*Math.PI/180;return [cx+r*Math.cos(a), cy-r*Math.sin(a)];}
@@ -424,7 +449,7 @@
     $('gauge').innerHTML = buildGauge(tT);
 
     // stacked bar + legend
-    var order = ['car','fly','home','food','waste','ai'];
+    var order = ['car','fly','home','food','goods','waste','ai'];
     var stack='', legend='';
     order.forEach(function(k){
       var v = d[k]; var pct = t>0 ? (v/t*100) : 0;
@@ -437,7 +462,7 @@
     $('legend').innerHTML = legend;
 
     // ---- AI spotlight ----
-    var aiKg = d.ai;
+    var aiKg = d.aiOnly;
     var aiShare = t>0 ? (aiKg/t*100) : 0;
     var milesEq = state.carFactor>0 ? aiKg/state.carFactor : 0;
     var aiGal = d.aiWaterL * L_GAL;
@@ -507,6 +532,11 @@
     });
   }
   chk('cCompost','compost'); chk('cRenew','renew'); chk('cBike','bike'); chk('cCold','cold');
+
+  $('hhSize').addEventListener('input',function(e){state.hhSize=+e.target.value;$('hhVal').textContent=state.hhSize===1?'1 housemate':state.hhSize+' housemates';render();});
+  $('goodsLevel').addEventListener('change',function(e){state.goods=+e.target.value;render();});
+  $('streamHrs').addEventListener('input',function(e){state.streaming=+e.target.value;$('streamVal').textContent=state.streaming;render();});
+  $('socialHrs').addEventListener('input',function(e){state.social=+e.target.value;$('socialVal').textContent=state.social;render();});
 
   render();
 })();
